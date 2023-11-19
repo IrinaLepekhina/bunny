@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  rabbitmq:
+    image: "rabbitmq:management"
+    container_name: rabbitmq
+    hostname: rabbitmq
+    ports:
+      - "15672:15672" # Management UI
+      - "5672:5672"   # RabbitMQ
+    volumes:
+      - ./.erlang.cookie:/var/lib/rabbitmq/.erlang.cookie
+    networks:
+      - chat_bot
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping", "-q"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  rabbitmq_init:
+    image: "rabbitmq:management"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./bunny_init.sh:/etc/rabbitmq/conf.d/init.sh
+      - ./.erlang.cookie:/var/lib/rabbitmq/.erlang.cookie
+    container_name: rabbitmq_init
+    networks:
+      - chat_bot
+    entrypoint: ["/bin/bash", "-c", "
+      sleep 10;
+      /etc/rabbitmq/conf.d/init.sh;"]
+
+networks:
+  chat_bot:
+    driver: bridge
+    name:   chat_bot
+    # external: true
